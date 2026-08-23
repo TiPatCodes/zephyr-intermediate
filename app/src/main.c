@@ -10,7 +10,7 @@ LOG_MODULE_REGISTER(l1_task1, LOG_LEVEL_DBG);
 #define PRIO_LOW    7
 #define PRIO_MED    5
 #define PRIO_HIGH   3
-#define PRIO_COOP  (-1)
+#define PRIO_COOP   -1
 
 void t_low_fn(void *p1, void *p2, void *p3)
 {
@@ -38,15 +38,15 @@ void t_high_fn(void *p1, void *p2, void *p3)
 
 void t_coop_fn(void *p1, void *p2, void *p3)
 {
-    while (1) {
+    // while (1) {
         for (int i = 0; i < 5 ; i ++)
         {
-            LOG_DBG("T_Coop_iteration ");
-            // k_msleep(1000);
-            // k_yield();
+            LOG_DBG("T_Coop_iteration %d",i);
         }
+        // LOG_DBG("T_Coop_iteration");
         k_yield();
-    }
+    // }
+    
 }
 
 K_THREAD_DEFINE(thread_a, STACK_SIZE, t_low_fn,NULL, NULL, NULL, PRIO_LOW, 0, 0);
