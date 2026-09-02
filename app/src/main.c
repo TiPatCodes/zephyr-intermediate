@@ -7,7 +7,7 @@ LOG_MODULE_REGISTER(demo, LOG_LEVEL_DBG);
  * PART A: Uncomment this define to demonstrate the fault.
  * Expiry will call k_sleep - assertion triggers immediately.
  */
-#define BLOCK_IN_EXPIRY 
+// #define BLOCK_IN_EXPIRY 
 
 static void work_handler(struct k_work *work)
 {
