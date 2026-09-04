@@ -1,3 +1,4 @@
+#include "zephyr/toolchain.h"
 #include <math.h>
 #include <stdint.h>
 #include <zephyr/kernel.h>
@@ -16,12 +17,15 @@ K_MUTEX_DEFINE(mutex_1);
 
 void incr_cntr(void *p1, void *p2, void *p3)
 {
+    ARG_UNUSED(p1);
+    ARG_UNUSED(p2);
+    ARG_UNUSED(p3);
+
     while (cntr < INCREMENT) {
-        LOG_INF("[thread] - %s and [tick] %d", k_thread_name_get(k_current_get()), k_uptime_get_32());
+        LOG_INF("[ %s ] at [ %d ]", k_thread_name_get(k_current_get()), k_uptime_get_32());
         LOG_DBG("Incrementing the counter ");
         cntr ++;
-        // k_msleep(300);;
-        k_yield();
+        k_msleep(300);;
     }
 }
 
