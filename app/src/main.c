@@ -5,7 +5,7 @@ LOG_MODULE_REGISTER(demo, LOG_LEVEL_DBG);
 
 #define STACK_SIZE      1024
 #define PRIO            5
-#define INCREMENTS      100   /* each thread increments this many times */
+#define INCREMENTS      5000   /* each thread increments this many times */
 
 /* Shared state - intentionally unprotected */
 static volatile uint32_t counter;
@@ -37,6 +37,8 @@ int main(void)
 {
     k_sem_init(&done_sem, 0, 2);
     int64_t time = k_uptime_get();
+    
+    LOG_INF("Execution start time: %lld ms", time);
 
     LOG_INF("=== L2 Demo 2: Mutex Protection ===");
     LOG_INF("Expected final value: %d", INCREMENTS * 2);
