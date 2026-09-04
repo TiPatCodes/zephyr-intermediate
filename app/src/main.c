@@ -5,26 +5,25 @@ LOG_MODULE_REGISTER(demo, LOG_LEVEL_DBG);
 
 #define STACK_SIZE      1024
 #define PRIO            5
-#define INCREMENTS      10000   /* each thread increments this many times */
+#define INCREMENTS      150000   /* each thread increments this many times */
 
 /* Shared state - intentionally unprotected */
 static volatile uint32_t counter;
 
 static struct k_sem done_sem;
 
-// static K_MUTEX_DEFINE(counter_mutex);
+static K_MUTEX_DEFINE(counter_mutex);
 
 void worker_fn(void *p1, void *p2, void *p3)
 {
     const char *name = k_thread_name_get(k_current_get());
 
     for (int i = 0; i < INCREMENTS; i++) {
-        // k_mutex_lock(&counter_mutex, K_FOREVER);
+        k_mutex_lock(&counter_mutex, K_FOREVER);
         counter++;
-        // k_mutex_unlock(&counter_mutex);
+        k_mutex_unlock(&counter_mutex);
     }
-
-    LOG_INF("[%s] finished, Execution time: %lld ms", name, k_uptime_get());
+    LOG_INF("[%s] finished", name);
     k_sem_give(&done_sem);
 }
 
