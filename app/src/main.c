@@ -24,7 +24,7 @@ void incr_cntr(void *p1, void *p2, void *p3)
     while (cntr < INCREMENT) {
         LOG_INF("[ %s ] Incrementing at [ %lld ]", k_thread_name_get(k_current_get()), k_uptime_get());
         cntr ++;
-        LOG_INF("Counter at %d",cntr);
+        LOG_INF("Counter is  %d at [ %lld ]",cntr,k_uptime_get());
         k_msleep(30);
     }
 }
