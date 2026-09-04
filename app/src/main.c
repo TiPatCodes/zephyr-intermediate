@@ -22,7 +22,10 @@ void coop_fn(void *p1, void *p2, void *p3)
     LOG_INF("[COOP] yielding now - HIGH and LOW can run");
     k_yield();
 
-    LOG_INF("[COOP] done");
+    LOG_INF("[COOP] done"); // NOTE : after this point the thread 
+                            // terminates itself, thus let preemptive threads
+                            // run.
+
 }
 
 void high_fn(void *p1, void *p2, void *p3)
