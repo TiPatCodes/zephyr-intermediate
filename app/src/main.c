@@ -8,7 +8,7 @@ LOG_MODULE_REGISTER(l2_assignment, LOG_LEVEL_DBG);
 
 
 #define STACK_SIZE 1024
-#define INCREMENT    10
+#define INCREMENT    10000
 #define PRIO   3
 
 static volatile uint32_t cntr = 0;
@@ -22,10 +22,12 @@ void incr_cntr(void *p1, void *p2, void *p3)
     ARG_UNUSED(p3);
 
     while (cntr < INCREMENT) {
-        LOG_INF("[ %s ] Incrementing at [ %lld ]", k_thread_name_get(k_current_get()), k_uptime_get());
+        LOG_INF("[ %s ] Incrementing at [ %lld ] for counter  %d ", k_thread_name_get(k_current_get()), k_uptime_get(),cntr);
+        k_mutex_lock(&mutex_1,K_FOREVER);
         cntr ++;
+        k_mutex_unlock(&mutex_1);
         LOG_INF("Counter is  %d at [ %lld ]",cntr,k_uptime_get());
-        k_msleep(30);
+        k_yield();
     }
 }
 
@@ -36,6 +38,7 @@ K_THREAD_DEFINE(thread_b, STACK_SIZE, incr_cntr,NULL,NULL, NULL, PRIO, 0, 0);
 int main(void)
 {
     LOG_INF("START test running over...........");
+    // k_msleep(10);
     return 0;
 }
 
