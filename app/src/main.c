@@ -3,7 +3,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_REGISTER(l1_task1, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(l2_assignment, LOG_LEVEL_DBG);
 
 
 #define STACK_SIZE 1024
