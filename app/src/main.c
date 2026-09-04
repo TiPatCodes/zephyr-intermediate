@@ -1,3 +1,4 @@
+// #include "zephyr/kernel/thread.h"
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <stdbool.h>
@@ -22,11 +23,13 @@ static K_SEM_DEFINE(part_b_complete, 0, 1);
 /* Producer: sets a flag */
 void producer_poll(void *p1, void *p2, void *p3)
 {
+    k_thread_suspend(k_current_get());
     for (int i = 0; i < EVENT_COUNT; i++) {
         k_msleep(PRODUCE_MS);
         event_flag = true;
         LOG_INF("[PROD-A] event %d produced at tick %u",
                 i, k_uptime_get_32());
+        
     }
 }
 
@@ -35,7 +38,7 @@ void consumer_poll(void *p1, void *p2, void *p3)
 {
     int received = 0;
     int wakeups  = 0;
-
+    k_thread_suspend(k_current_get());
     while (received < EVENT_COUNT) {
         k_msleep(POLL_MS);
         wakeups++;
@@ -46,8 +49,8 @@ void consumer_poll(void *p1, void *p2, void *p3)
             LOG_INF("[CONS-A] processed event %d (woke %d times so far)",
                     received, wakeups);
         }
+        
     }
-
     LOG_INF("[CONS-A] total wake-ups: %d  for %d events  "
             "(~%d unnecessary wake-ups)",
             wakeups, EVENT_COUNT, wakeups - EVENT_COUNT);
@@ -58,7 +61,7 @@ void consumer_poll(void *p1, void *p2, void *p3)
 /*  Part B -- semaphore                                                 */
 /* ------------------------------------------------------------------ */
 
-static K_SEM_DEFINE(event_sem, 0, EVENT_COUNT);
+static K_SEM_DEFINE(event_sem, 0, 1);
 
 /* Producer: gives semaphore */
 void producer_sem(void *p1, void *p2, void *p3)
@@ -103,13 +106,14 @@ int main(void)
     /* --- Part A: polling --- */
     LOG_INF("--- Part A: POLLING consumer (every %d ms) ---", POLL_MS);
     event_flag = false;
+    k_tid_t tha,thb;
 
-    k_thread_create(&prod_a, prod_a_stk, STACK_SIZE, producer_poll,
+    tha = k_thread_create(&prod_a, prod_a_stk, STACK_SIZE, producer_poll,
                     NULL, NULL, NULL, PRIO_PROD, 0, K_NO_WAIT);
-    k_thread_create(&cons_a, cons_a_stk, STACK_SIZE, consumer_poll,
+    thb = k_thread_create(&cons_a, cons_a_stk, STACK_SIZE, consumer_poll,
                     NULL, NULL, NULL, PRIO_CONS, 0, K_NO_WAIT);
 
-    k_sem_take(&part_a_complete, K_FOREVER);
+    // k_sem_take(&part_a_complete, K_FOREVER);
     k_msleep(300);
 
     /* --- Part B: semaphore --- */
@@ -121,6 +125,9 @@ int main(void)
                     NULL, NULL, NULL, PRIO_CONS, 0, K_NO_WAIT);
 
     k_sem_take(&part_b_complete, K_FOREVER);
+    k_thread_resume(tha);
+    k_thread_resume(thb);
+    k_sem_take(&part_a_complete, K_FOREVER);
 
     LOG_INF("=== Summary ===");
     LOG_INF("Polling:   ~%d wake-ups for %d events",
