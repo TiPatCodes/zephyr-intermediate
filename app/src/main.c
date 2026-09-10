@@ -81,8 +81,7 @@ static int selfreschedule_count;
 static void selfreschedule_handler(struct k_work *work)
 {
     struct k_work_delayable *dwork = k_work_delayable_from_work(work);
-    static uint32_t previous_tick = 0;
-    uint32_t current_tick = k_uptime_get_32();
+    static uint32_t previous_tick = 0; // we use static to retain previous tick 
     uint32_t delta = current_tick - previous_tick;
     if (previous_tick == 0) {
         delta = 0;   /* first invocation */
