@@ -161,7 +161,7 @@ static void p2_consumer(void *p1, void *p2, void *p3)
                 received,
                 P2_WANT);
 
-        int drops = (int)atomic_set(&p2_isr_dropped, 0);
+        int drops = (int)atomic_set(&p2_isr_dropped, 0); // gives the old value in the return also while setting the the atomic variable 
         if (drops > 0) {
             LOG_WRN("[P2-CONS] ISR drops=%d (queue full, K_NO_WAIT)", drops);
         }
