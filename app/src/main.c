@@ -49,7 +49,7 @@ ZBUS_MSG_SUBSCRIBER_DEFINE(logger_sub);
 
 ZBUS_CHAN_DEFINE(sensor_chan, struct sensor_data,
                  NULL, NULL,
-                 ZBUS_OBSERVERS(display_lis, logger_sub, alarm_sub),
+                 ZBUS_OBSERVERS(display_lis, logger_sub),
                  ZBUS_MSG_INIT(.temperature_mc = 0,
                                .timestamp_ms = 0,
                                .seq = 0));
