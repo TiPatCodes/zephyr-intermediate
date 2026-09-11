@@ -41,7 +41,7 @@ ZBUS_MSG_SUBSCRIBER_DEFINE(logger_sub);
  * Alarm is a regular subscriber.
  * It receives channel notifications and then reads the latest value.
  */
-ZBUS_SUBSCRIBER_DEFINE(alarm_sub, 4);
+// ZBUS_SUBSCRIBER_DEFINE(alarm_sub, 4);
 
 /* ================================================================== */
 /*  Channel                                                           */
@@ -152,7 +152,7 @@ static void logger_thread_fn(void *p1, void *p2, void *p3)
 /* ================================================================== */
 /*  Subscriber - alarm                                                */
 /* ================================================================== */
-
+/*
 static void alarm_thread_fn(void *p1, void *p2, void *p3)
 {
     ARG_UNUSED(p1); ARG_UNUSED(p2); ARG_UNUSED(p3);
@@ -191,7 +191,7 @@ static void alarm_thread_fn(void *p1, void *p2, void *p3)
         }
     }
 }
-
+*/
 /* ================================================================== */
 /*  Threads                                                           */
 /* ================================================================== */
@@ -202,8 +202,8 @@ K_THREAD_DEFINE(sensor_thread, STACK_SIZE, sensor_thread_fn,
 K_THREAD_DEFINE(logger_thread, STACK_SIZE, logger_thread_fn,
                 NULL, NULL, NULL, 6, 0, 0);
 
-K_THREAD_DEFINE(alarm_thread, STACK_SIZE, alarm_thread_fn,
-                NULL, NULL, NULL, 6, 0, 0);
+// K_THREAD_DEFINE(alarm_thread, STACK_SIZE, alarm_thread_fn,
+//                 NULL, NULL, NULL, 6, 0, 0);
 
 /* ================================================================== */
 /*  Main                                                              */
@@ -211,12 +211,12 @@ K_THREAD_DEFINE(alarm_thread, STACK_SIZE, alarm_thread_fn,
 
 int main(void)
 {
-    LOG_INF("=== L4 Demo 2: Zbus Pub-Sub ===");
+    LOG_INF("=== L4 task 2: Zbus Pub-Sub ===");
     LOG_INF("sensor publishes every %dms", SENSOR_PERIOD_MS);
     LOG_INF("display listener runs in publisher context");
     LOG_INF("logger uses message subscriber copies");
-    LOG_INF("alarm uses a regular subscriber");
-    LOG_INF("alarm threshold: %d mC", TEMP_ALARM_MC);
+    // LOG_INF("alarm uses a regular subscriber");
+    // LOG_INF("alarm threshold: %d mC", TEMP_ALARM_MC);
 
     return 0;
 }
