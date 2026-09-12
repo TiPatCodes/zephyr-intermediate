@@ -9,8 +9,7 @@ LOG_MODULE_REGISTER(homework, LOG_LEVEL_DBG);
 
 #define STACK_SIZE       2048
 #define SENSOR_COUNT       18
-#define SENSOR_PERIOD_MS  150
-#define TEMP_ALARM_MC   27000
+#define SENSOR_PERIOD_MS  100
 
 /* ================================================================== */
 /*  Shared channel message                                            */
