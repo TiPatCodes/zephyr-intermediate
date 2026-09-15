@@ -11,7 +11,7 @@ LOG_MODULE_REGISTER(demo, LOG_LEVEL_INF);
 #define TRIGGER_STACK_OVERFLOW 1
 
 #if TRIGGER_STACK_OVERFLOW
-#define WORKER_STACK_SIZE 768
+#define WORKER_STACK_SIZE 2506
 #else
 #define WORKER_STACK_SIZE 1536
 #endif
@@ -82,7 +82,7 @@ static void worker_fn(void *p1, void *p2, void *p3)
 
         k_msleep(40);
     }
-
+#endif
     /*
      * Keep this thread alive while main scans its stack.
      */
@@ -90,7 +90,7 @@ static void worker_fn(void *p1, void *p2, void *p3)
     k_sem_take(&worker_release, K_FOREVER);
 
     LOG_INF("[WORKER] done");
-#endif
+// #endif
 }
 
 K_THREAD_DEFINE(worker_thread, WORKER_STACK_SIZE, worker_fn,
@@ -104,12 +104,13 @@ int main(void)
     LOG_INF("Part 1: stack sentinel failure");
     LOG_INF("Set TRIGGER_STACK_OVERFLOW to 0 for Part 2");
 
-    k_sleep(K_FOREVER);
+    // k_sleep(K_FOREVER);
+    k_sem_take(&workload_done, K_FOREVER);
 #else
     LOG_INF("Part 2: workload and Thread Analyzer");
 
     k_sem_take(&workload_done, K_FOREVER);
-
+#endif
     LOG_INF("--- Thread Analyzer report ---");
 
     thread_analyzer_print(0);
@@ -118,7 +119,7 @@ int main(void)
     LOG_INF("Keep headroom for interrupts and rare code paths");
 
     k_sem_give(&worker_release);
-#endif
+
 
     return 0;
 }
