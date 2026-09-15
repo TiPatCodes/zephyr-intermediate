@@ -1,5 +1,6 @@
 #include "zephyr/toolchain.h"
 #include <math.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
@@ -10,67 +11,18 @@ LOG_MODULE_REGISTER(homework, LOG_LEVEL_DBG);
 #define STACK_SIZE       2048
 #define SENSOR_COUNT       18
 #define SENSOR_PERIOD_MS  100
-
+#define LOGGER_PERIOD_MS  (SENSOR_PERIOD_MS * 2)
+#define MSG_Q_DEPTH       (SENSOR_COUNT/2) 
 /* ================================================================== */
-/*  Shared channel message                                            */
+/*  Shared  message                                            */
 /* ================================================================== */
-
 struct sensor_data {
     int32_t temperature_mc;
     uint32_t timestamp_ms;
     uint8_t seq;
 };
 
-/* Forward declarations required before observer/channel definitions. */
-static void display_listener_cb(const struct zbus_channel *chan);
-
-/* ================================================================== */
-/*  Observers                                                         */
-/* ================================================================== */
-
-ZBUS_LISTENER_DEFINE(display_lis, display_listener_cb);
-
-/*
- * Logger is a message subscriber.
- * It receives message copies, not only channel notifications.
- */
-ZBUS_MSG_SUBSCRIBER_DEFINE(logger_sub);
-
-/*
- * Alarm is a regular subscriber.
- * It receives channel notifications and then reads the latest value.
- */
-// ZBUS_SUBSCRIBER_DEFINE(alarm_sub, 4);
-
-/* ================================================================== */
-/*  Channel                                                           */
-/* ================================================================== */
-
-ZBUS_CHAN_DEFINE(sensor_chan, struct sensor_data,
-                 NULL, NULL,
-                 ZBUS_OBSERVERS(display_lis, logger_sub),
-                 ZBUS_MSG_INIT(.temperature_mc = 0,
-                               .timestamp_ms = 0,
-                               .seq = 0));
-
-/* ================================================================== */
-/*  Listener - synchronous observer                                   */
-/* ================================================================== */
-
-static void display_listener_cb(const struct zbus_channel *chan)
-{
-    const struct sensor_data *msg =
-        (const struct sensor_data *)zbus_chan_const_msg(chan);
-
-    /*
-     * Listener runs in publisher context.
-     * Keep it short. No blocking work here.
-     */
-    LOG_INF("[DISPLAY-LIS] thread=%s seq=%u temp=%d mC",
-            k_thread_name_get(k_current_get()),
-            msg->seq,
-            msg->temperature_mc);
-}
+K_MSGQ_DEFINE(msg_q,sizeof(struct sensor_data), MSG_Q_DEPTH, 4);
 
 /* ================================================================== */
 /*  Publisher                                                         */
@@ -89,11 +41,12 @@ static void sensor_thread_fn(void *p1, void *p2, void *p3)
             .seq = (uint8_t)i,
         };
 
-        LOG_INF("[SENSOR] publish seq=%u temp=%d mC",
+        LOG_INF("[SENSOR] data in msgq seq=%u temp=%d mC",
                 data.seq,
                 data.temperature_mc);
 
-        int ret = zbus_chan_pub(&sensor_chan, &data, K_MSEC(100));
+        // int ret = zbus_chan_pub(&sensor_chan, &data, K_MSEC(100));
+        int ret = k_msgq_put(&msg_q, &data, K_NO_WAIT);
         if (ret != 0) {
             LOG_WRN("[SENSOR] publish failed ret=%d", ret);
         }
@@ -105,7 +58,7 @@ static void sensor_thread_fn(void *p1, void *p2, void *p3)
 }
 
 /* ================================================================== */
-/*  Message subscriber - logger                                       */
+/*  consumer - logger                                                 */
 /* ================================================================== */
 
 static void logger_thread_fn(void *p1, void *p2, void *p3)
@@ -113,10 +66,8 @@ static void logger_thread_fn(void *p1, void *p2, void *p3)
     ARG_UNUSED(p1); ARG_UNUSED(p2); ARG_UNUSED(p3);
 
     k_thread_name_set(k_current_get(), "logger");
-
-    const struct zbus_channel *chan;
     int received = 0;
-
+    struct sensor_data msg;
     while (received < SENSOR_COUNT) {
         struct sensor_data msg;
 
@@ -124,7 +75,8 @@ static void logger_thread_fn(void *p1, void *p2, void *p3)
          * Message subscribers receive a copy of the published message.
          * The slow logger will not reread the latest channel value.
          */
-        int ret = zbus_sub_wait_msg(&logger_sub, &chan, &msg, K_MSEC(1500));
+        // int ret = zbus_sub_wait_msg(&logger_sub, &chan, &msg, K_MSEC(1500));
+        int ret = k_msgq_get(&msg_q, &msg, K_MSEC(20));
         if (ret != 0) {
             LOG_WRN("[LOGGER-MSG] timeout ret=%d", ret);
             break;
@@ -141,56 +93,14 @@ static void logger_thread_fn(void *p1, void *p2, void *p3)
         /*
          * Slow logger.
          * Message copies let it process old samples safely.
-         */
-        k_msleep(350);
+        */
+
+        k_msleep(LOGGER_PERIOD_MS);
     }
 
     LOG_INF("[LOGGER-MSG] done received=%d", received);
 }
 
-/* ================================================================== */
-/*  Subscriber - alarm                                                */
-/* ================================================================== */
-/*
-static void alarm_thread_fn(void *p1, void *p2, void *p3)
-{
-    ARG_UNUSED(p1); ARG_UNUSED(p2); ARG_UNUSED(p3);
-
-    k_thread_name_set(k_current_get(), "alarm");
-
-    const struct zbus_channel *chan;
-    int alarms = 0;
-
-    while (true) {
-        int ret = zbus_sub_wait(&alarm_sub, &chan, K_MSEC(3000));
-        if (ret != 0) {
-            LOG_INF("[ALARM-SUB] timeout, done");
-            break;
-        }
-
-        struct sensor_data msg;
-
-        ret = zbus_chan_read(chan, &msg, K_MSEC(100));
-        if (ret != 0) {
-            LOG_WRN("[ALARM-SUB] read failed ret=%d", ret);
-            continue;
-        }
-
-        if (msg.temperature_mc >= TEMP_ALARM_MC) {
-            alarms++;
-
-            LOG_WRN("[ALARM-SUB] HIGH TEMP seq=%u temp=%d mC alarms=%d",
-                    msg.seq,
-                    msg.temperature_mc,
-                    alarms);
-        } else {
-            LOG_INF("[ALARM-SUB] ok seq=%u temp=%d mC",
-                    msg.seq,
-                    msg.temperature_mc);
-        }
-    }
-}
-*/
 /* ================================================================== */
 /*  Threads                                                           */
 /* ================================================================== */
@@ -201,8 +111,8 @@ K_THREAD_DEFINE(sensor_thread, STACK_SIZE, sensor_thread_fn,
 K_THREAD_DEFINE(logger_thread, STACK_SIZE, logger_thread_fn,
                 NULL, NULL, NULL, 6, 0, 0);
 
-// K_THREAD_DEFINE(alarm_thread, STACK_SIZE, alarm_thread_fn,
-//                 NULL, NULL, NULL, 6, 0, 0);
+// K_THREAD_DEFINE(health_thread, STACK_SIZE, health_thread_fn,
+                // NULL, NULL, NULL, 6, 0, 0);
 
 /* ================================================================== */
 /*  Main                                                              */
@@ -210,13 +120,9 @@ K_THREAD_DEFINE(logger_thread, STACK_SIZE, logger_thread_fn,
 
 int main(void)
 {
-    LOG_INF("=== L4 task 2: Zbus Pub-Sub ===");
+    LOG_INF("=== L5 task 1: Message q  Producer - Consumer ===");
     LOG_INF("sensor publishes every %dms", SENSOR_PERIOD_MS);
-    LOG_INF("display listener runs in publisher context");
-    LOG_INF("logger uses message subscriber copies");
-    // LOG_INF("alarm uses a regular subscriber");
-    // LOG_INF("alarm threshold: %d mC", TEMP_ALARM_MC);
-
+    LOG_INF("logger uses message to read message copies");
     return 0;
 }
 
