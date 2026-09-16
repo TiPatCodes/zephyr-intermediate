@@ -6,7 +6,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/zbus/zbus.h>
 
-LOG_MODULE_REGISTER(homework, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(homework, LOG_LEVEL_INF);
 
 #define STACK_SIZE       2048
 #define SENSOR_COUNT       18
@@ -23,6 +23,7 @@ struct sensor_data {
 };
 
 K_MSGQ_DEFINE(msg_q,sizeof(struct sensor_data), MSG_Q_DEPTH, 4);
+K_SEM_DEFINE(sem_done,0,3);
 
 /* ================================================================== */
 /*  Publisher                                                         */
@@ -55,6 +56,7 @@ static void sensor_thread_fn(void *p1, void *p2, void *p3)
     }
 
     LOG_INF("[SENSOR] done");
+    k_sem_give(&sem_done);
 }
 
 /* ================================================================== */
@@ -69,8 +71,6 @@ static void logger_thread_fn(void *p1, void *p2, void *p3)
     int received = 0;
     struct sensor_data msg;
     while (received < SENSOR_COUNT) {
-        struct sensor_data msg;
-
         /*
          * Message subscribers receive a copy of the published message.
          * The slow logger will not reread the latest channel value.
@@ -99,8 +99,20 @@ static void logger_thread_fn(void *p1, void *p2, void *p3)
     }
 
     LOG_INF("[LOGGER-MSG] done received=%d", received);
+    k_sem_give(&sem_done);
 }
 
+
+static void health_thread_fn(void *p1, void *p2, void *p3 )
+{
+    for (int i=0; i < SENSOR_COUNT ; i++)
+    {
+        int left_space  =  k_msgq_num_used_get(&msg_q);
+        LOG_INF("[HEALTH] msg_q has used %d / %d", left_space, MSG_Q_DEPTH);
+        k_msleep(150);
+    }
+    k_sem_give(&sem_done);
+}
 /* ================================================================== */
 /*  Threads                                                           */
 /* ================================================================== */
@@ -109,10 +121,10 @@ K_THREAD_DEFINE(sensor_thread, STACK_SIZE, sensor_thread_fn,
                 NULL, NULL, NULL, 5, 0, 0);
 
 K_THREAD_DEFINE(logger_thread, STACK_SIZE, logger_thread_fn,
-                NULL, NULL, NULL, 6, 0, 0);
+                NULL, NULL, NULL, 5, 0, 0);
 
-// K_THREAD_DEFINE(health_thread, STACK_SIZE, health_thread_fn,
-                // NULL, NULL, NULL, 6, 0, 0);
+K_THREAD_DEFINE(health_thread, STACK_SIZE, health_thread_fn,
+                NULL, NULL, NULL, 6, 0, 0);
 
 /* ================================================================== */
 /*  Main                                                              */
@@ -123,7 +135,12 @@ int main(void)
     LOG_INF("=== L5 task 1: Message q  Producer - Consumer ===");
     LOG_INF("sensor publishes every %dms", SENSOR_PERIOD_MS);
     LOG_INF("logger uses message to read message copies");
-    return 0;
+
+    k_sem_take(&sem_done,K_FOREVER);
+    k_sem_take(&sem_done,K_FOREVER);
+    k_sem_take(&sem_done,K_FOREVER);
+
+    LOG_INF("=== L5 task 1: END ===");
 }
 
 
