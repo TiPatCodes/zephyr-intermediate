@@ -1,10 +1,8 @@
-#include "zephyr/toolchain.h"
-#include <math.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <zephyr/task_wdt/task_wdt.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
-#include <zephyr/zbus/zbus.h>
+
+
 
 LOG_MODULE_REGISTER(homework, LOG_LEVEL_INF);
 
@@ -107,8 +105,13 @@ static void health_thread_fn(void *p1, void *p2, void *p3 )
 {
     for (int i=0; i < SENSOR_COUNT ; i++)
     {
-        int left_space  =  k_msgq_num_used_get(&msg_q);
-        LOG_INF("[HEALTH] msg_q has used %d / %d", left_space, MSG_Q_DEPTH);
+        int used  =  k_msgq_num_used_get(&msg_q);
+
+        if(used > (MSG_Q_DEPTH * 3/4))
+        {
+            LOG_WRN("[HEALTH] msg_q has used 3/4 ");
+        }
+        LOG_INF("[HEALTH] msg_q has used %d / %d", used, MSG_Q_DEPTH);
         k_msleep(150);
     }
     k_sem_give(&sem_done);
