@@ -10,6 +10,7 @@ LOG_MODULE_REGISTER(homework, LOG_LEVEL_INF);
 #define SENSOR_COUNT       18
 #define SENSOR_PERIOD_MS  100
 #define LOGGER_PERIOD_MS  (SENSOR_PERIOD_MS * 2)
+#define TASK_TIMEPERIOD   (LOGGER_PERIOD_MS / 2 )
 #define MSG_Q_DEPTH       (SENSOR_COUNT/2) 
 /* ================================================================== */
 /*  Shared  message                                            */
@@ -22,6 +23,12 @@ struct sensor_data {
 
 K_MSGQ_DEFINE(msg_q,sizeof(struct sensor_data), MSG_Q_DEPTH, 4);
 K_SEM_DEFINE(sem_done,0,3);
+
+// task callback function 
+static void task_callback_fn( int channel_id, void * user_data)
+{
+    LOG_WRN("[TASK WDT] DOESNOT FEED %d channel, thread %s", channel_id,k_thread_name_get((k_tid_t)user_data));
+}
 
 /* ================================================================== */
 /*  Publisher                                                         */
@@ -68,6 +75,7 @@ static void logger_thread_fn(void *p1, void *p2, void *p3)
     k_thread_name_set(k_current_get(), "logger");
     int received = 0;
     struct sensor_data msg;
+    int task_wdtch;
     while (received < SENSOR_COUNT) {
         /*
          * Message subscribers receive a copy of the published message.
@@ -82,6 +90,8 @@ static void logger_thread_fn(void *p1, void *p2, void *p3)
 
         received++;
 
+        task_wdtch = task_wdt_add(TASK_TIMEPERIOD, task_callback_fn, (void*)k_current_get());
+
         LOG_INF("[LOGGER-MSG] thread=%s seq=%u temp=%d latency=%ums",
                 k_thread_name_get(k_current_get()),
                 msg.seq,
@@ -92,6 +102,7 @@ static void logger_thread_fn(void *p1, void *p2, void *p3)
          * Slow logger.
          * Message copies let it process old samples safely.
         */
+        task_wdt_feed(task_wdtch);
 
         k_msleep(LOGGER_PERIOD_MS);
     }
@@ -138,7 +149,12 @@ int main(void)
     LOG_INF("=== L5 task 1: Message q  Producer - Consumer ===");
     LOG_INF("sensor publishes every %dms", SENSOR_PERIOD_MS);
     LOG_INF("logger uses message to read message copies");
-
+    // Intializing the task watch dog
+    if(task_wdt_init(NULL) != 0)
+    {
+        LOG_ERR("NO TASK WATCH DOG CREATED");
+    }
+   
     k_sem_take(&sem_done,K_FOREVER);
     k_sem_take(&sem_done,K_FOREVER);
     k_sem_take(&sem_done,K_FOREVER);
