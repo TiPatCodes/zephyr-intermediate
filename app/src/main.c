@@ -8,7 +8,7 @@ LOG_MODULE_REGISTER(demo, LOG_LEVEL_INF);
 
 /* Set to 1 after diagnosing the circular wait. */
 #ifndef FIX_LOCK_ORDER
-#define FIX_LOCK_ORDER 0
+#define FIX_LOCK_ORDER 1
 #endif
 
 K_MUTEX_DEFINE(mutex_a);
@@ -33,8 +33,8 @@ static void do_corrected_iteration(const char *name)
     LOG_INF("[%s] completed=%d", name,
             (int)atomic_get(&completed_iterations));
 
-    k_mutex_unlock(&mutex_b);
     k_mutex_unlock(&mutex_a);
+    k_mutex_unlock(&mutex_b);
 }
 #endif
 
