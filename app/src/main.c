@@ -59,7 +59,7 @@ K_TIMER_DEFINE(event_timer, event_timer_expiry, NULL);
 static void control_fn(void *p1, void *p2, void *p3)
 {
     ARG_UNUSED(p1); ARG_UNUSED(p2); ARG_UNUSED(p3);
-
+    uint32_t count = 0;
     while (true) {
         struct control_event event;
         int ret = k_msgq_get(&control_queue, &event, K_FOREVER);
@@ -74,8 +74,14 @@ static void control_fn(void *p1, void *p2, void *p3)
         /* TODO: Define a response-time guarantee. */
         uint32_t latency =  k_uptime_get_32() -  event.ready_ms ;
         /* TODO: Measure latency and count every deadline miss. */
-        
+        if ( latency > RESPONSE_TIME_GUARANTEE){
+            count ++;
+        }
         /* TODO: Rate-limit repeated warning messages. */
+        if ( count == 15 ){
+            LOG_WRN(" Response guarantee broken for %d time", count);
+            count = 0; 
+        }
         /* TODO: Add an application trace event for completion. */
         sys_trace_named_event("event messg put", event.seq , event.ready_ms);
     }
