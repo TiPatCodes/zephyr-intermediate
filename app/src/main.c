@@ -1,3 +1,5 @@
+#include "tracing_ctf.h"
+#include <stdint.h>
 #include <zephyr/task_wdt/task_wdt.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
@@ -10,6 +12,7 @@ LOG_MODULE_REGISTER(homework, LOG_LEVEL_INF);
 #define MAINTENANCE_PRIORITY     4
 #define EVENT_PERIOD_MS        250
 #define MAINTENANCE_LOAD_US  45000
+#define RESPONSE_TIME_GUARANTEE 10
 
 struct control_event {
     uint32_t seq;
@@ -44,6 +47,7 @@ static void event_timer_expiry(struct k_timer *timer)
     k_sem_give(&maintenance_start);
 
     /* TODO: Add an application trace event for this sequence. */
+    sys_trace_named_event("event messg put", event.seq , event.ready_ms);
 }
 
 K_TIMER_DEFINE(event_timer, event_timer_expiry, NULL);
@@ -68,9 +72,12 @@ static void control_fn(void *p1, void *p2, void *p3)
         LOG_INF("[CONTROL] processed seq=%u", event.seq);
 
         /* TODO: Define a response-time guarantee. */
+        uint32_t latency =  k_uptime_get_32() -  event.ready_ms ;
         /* TODO: Measure latency and count every deadline miss. */
+        
         /* TODO: Rate-limit repeated warning messages. */
         /* TODO: Add an application trace event for completion. */
+        sys_trace_named_event("event messg put", event.seq , event.ready_ms);
     }
 }
 
@@ -88,7 +95,6 @@ static void maintenance_fn(void *p1, void *p2, void *p3)
         /* This work is important, but it has no short deadline. */
         k_busy_wait(MAINTENANCE_LOAD_US);
     }
-    k_sem_give(&sem_done);
 }
 /* ================================================================== */
 /*  Threads                                                           */
