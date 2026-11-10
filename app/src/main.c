@@ -76,12 +76,10 @@ static void control_fn(void *p1, void *p2, void *p3)
         /* TODO: Measure latency and count every deadline miss. */
         if ( latency > RESPONSE_TIME_GUARANTEE){
             count ++;
-        }
         /* TODO: Rate-limit repeated warning messages. */
-        if ( count == 15 ){
-            LOG_WRN(" Response guarantee broken for %d time", count);
-            count = 0; 
+            LOG_WRN_RATELIMIT("deadline misses count = %u seq = %u latency_ms %u", count, event.seq, latency);
         }
+    
         /* TODO: Add an application trace event for completion. */
         sys_trace_named_event("event messg put", event.seq , event.ready_ms);
     }
