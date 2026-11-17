@@ -51,7 +51,7 @@ void t_coop_fn(void *p1, void *p2, void *p3)
 
 K_THREAD_DEFINE(thread_a, STACK_SIZE, t_low_fn,NULL, NULL, NULL, PRIO_LOW, 0, 0);
 K_THREAD_DEFINE(thread_b, STACK_SIZE, t_med_fn,NULL, NULL, NULL, PRIO_MED, 0, 0);
-K_THREAD_DEFINE(thread_c, STACK_SIZE, t_high_fn,NULL, NULL, NULL, PRIO_MED, 0, 0);           
+K_THREAD_DEFINE(thread_c, STACK_SIZE, t_high_fn,NULL, NULL, NULL, PRIO_HIGH, 0, 0);           
 K_THREAD_DEFINE(thread_coop, STACK_SIZE, t_coop_fn,NULL,NULL, NULL, PRIO_COOP, 0, 0);           
 
 
