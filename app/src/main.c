@@ -79,36 +79,17 @@ static void control_fn(void *p1, void *p2, void *p3)
         /* TODO: Rate-limit repeated warning messages. */
             LOG_WRN_RATELIMIT("deadline misses count = %u seq = %u latency_ms %u", count, event.seq, latency);
         }
+        // LOG_DBG("T_Coop_iteration");
+        k_yield();
+    // }
     
-        /* TODO: Add an application trace event for completion. */
-        sys_trace_named_event("event messg put", event.seq , event.ready_ms);
-    }
 }
 
-/* ================================================================== */
-/*  Background maintenance thread                                    */
-/* ================================================================== */
+K_THREAD_DEFINE(thread_a, STACK_SIZE, t_low_fn,NULL, NULL, NULL, PRIO_LOW, 0, 0);
+K_THREAD_DEFINE(thread_b, STACK_SIZE, t_med_fn,NULL, NULL, NULL, PRIO_MED, 0, 0);
+K_THREAD_DEFINE(thread_c, STACK_SIZE, t_high_fn,NULL, NULL, NULL, PRIO_HIGH, 0, 0);           
+K_THREAD_DEFINE(thread_coop, STACK_SIZE, t_coop_fn,NULL,NULL, NULL, PRIO_COOP, 0, 0);           
 
-static void maintenance_fn(void *p1, void *p2, void *p3)
-{
-    ARG_UNUSED(p1); ARG_UNUSED(p2); ARG_UNUSED(p3);
-
-    while (true) {
-        k_sem_take(&maintenance_start, K_FOREVER);
-
-        /* This work is important, but it has no short deadline. */
-        k_busy_wait(MAINTENANCE_LOAD_US);
-    }
-}
-/* ================================================================== */
-/*  Threads                                                           */
-/* ================================================================== */
-
-K_THREAD_DEFINE(control, STACK_SIZE, control_fn,
-                NULL, NULL, NULL, CONTROL_PRIORITY, 0, 0);
-
-K_THREAD_DEFINE(maintenance, STACK_SIZE, maintenance_fn,
-                NULL, NULL, NULL, MAINTENANCE_PRIORITY, 0, 0);
 
 int main(void)
 {
