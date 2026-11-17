@@ -22,21 +22,21 @@ void worker_fn(void *p1, void *p2, void *p3)
 {
     const char *name = k_thread_name_get(k_current_get());
 
-    for (int i = 0; i < INCREMENTS; i++) { // Using "FOR" terminates the thread itself and continues unless break , no need of yielding
-        // k_mutex_lock(&counter_mutex, K_FOREVER);
-        counter++;
-        // LOG_DBG("[%s] finished at [%d]", name,counter);
-        // k_mutex_unlock(&counter_mutex);
-        // break;
-    }   
-    
-    // while(counter < INCREMENTS) { // -- This while loop instead of for loop only gives  Counter = INCREMETNT at the end.
-    //     k_mutex_lock(&counter_mutex, K_FOREVER);
+    // for (int i = 0; i < INCREMENTS; i++) { // Using "FOR" terminates the thread itself and continues unless break , no need of yielding
+    //     // k_mutex_lock(&counter_mutex, K_FOREVER);
     //     counter++;
-    //     k_mutex_unlock(&counter_mutex);
     //     // LOG_DBG("[%s] finished at [%d]", name,counter);
-    //     k_yield(); // -- If not used this in while loop then the entire thread will keep executing till Counter = INCREMETNT.
-    // }
+    //     // k_mutex_unlock(&counter_mutex);
+    //     // break;
+    // }   
+    
+    while(counter < INCREMENTS) { // -- This while loop instead of for loop only gives  Counter = INCREMETNT at the end.
+        k_mutex_lock(&counter_mutex, K_FOREVER);
+        counter++;
+        k_mutex_unlock(&counter_mutex);
+        LOG_DBG("[%s] finished at [%d]", name,counter);
+        k_yield(); // -- If not used this in while loop then the entire thread will keep executing till Counter = INCREMETNT.
+    }
 
     LOG_INF("[%s] finished ", name);
     k_sem_give(&done_sem);
