@@ -22,8 +22,7 @@ void worker_fn(void *p1, void *p2, void *p3)
 {
     const char *name = k_thread_name_get(k_current_get());
 
-    // without the mutex protection there will be counter increment to the same counter variable till INCREMENT.
-    // with thhe Mutex protection both the worker function will increment counter twice
+    // without the mutex protection there will be missed increments done ( LOAD - MODIFY - STORE won't happen without interrupt)
     
     while(counter < INCREMENTS) { // -- This while loop instead of for loop only gives  Counter = INCREMETNT at the end.
         k_mutex_lock(&counter_mutex, K_FOREVER);
