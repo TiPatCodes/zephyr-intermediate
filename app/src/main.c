@@ -3,86 +3,42 @@
 #include <zephyr/task_wdt/task_wdt.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
-#include <zephyr/tracing/tracing.h>
 
-LOG_MODULE_REGISTER(homework, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(l2_assignment, LOG_LEVEL_DBG);
 
-#define STACK_SIZE            2048
-#define CONTROL_PRIORITY         7
-#define MAINTENANCE_PRIORITY     4
-#define EVENT_PERIOD_MS        250
-#define MAINTENANCE_LOAD_US  45000
-#define RESPONSE_TIME_GUARANTEE 10
 
-struct control_event {
-    uint32_t seq;
-    uint32_t ready_ms;
-};
+#define STACK_SIZE      1024
+#define PRIO            5
+#define INCREMENTS      1000000   /* each thread increments this many times */
 
-K_MSGQ_DEFINE(control_queue, sizeof(struct control_event), 4, 4);
-K_SEM_DEFINE(maintenance_start, 0, 1);
+/* Shared state - intentionally unprotected */
+static volatile uint32_t counter;
 
-/* ================================================================== */
-/*  Timer expiry: creates one control event                           */
-/* ================================================================== */
+static struct k_sem done_sem;
 
-static void event_timer_expiry(struct k_timer *timer)
+static K_MUTEX_DEFINE(counter_mutex);
+
+void worker_fn(void *p1, void *p2, void *p3)
 {
-    ARG_UNUSED(timer);
+    const char *name = k_thread_name_get(k_current_get());
 
-    static uint32_t seq;
-    struct control_event event = {
-        .seq = seq++,
-        .ready_ms = k_uptime_get_32(),
-    };
-
-    /* Timer expiry runs in interrupt context, so never wait here. */
-    int ret = k_msgq_put(&control_queue, &event, K_NO_WAIT);
-
-    if (ret != 0) {
-        return;
+    // without the mutex protection there will be missed increments done ( LOAD - MODIFY - STORE won't happen without interrupt)
+    for (int i = 0; i < INCREMENTS; i++) {
+        k_mutex_lock(&counter_mutex, K_FOREVER);
+        counter++;
+        k_mutex_unlock(&counter_mutex);
     }
 
-    /* Both threads become ready when the timer interrupt returns. */
-    k_sem_give(&maintenance_start);
-
-    /* TODO: Add an application trace event for this sequence. */
-    sys_trace_named_event("event messg put", event.seq , event.ready_ms);
-}
-
-K_TIMER_DEFINE(event_timer, event_timer_expiry, NULL);
-
-/* ================================================================== */
-/*  Control thread                                                   */
-/* ================================================================== */
-
-static void control_fn(void *p1, void *p2, void *p3)
-{
-    ARG_UNUSED(p1); ARG_UNUSED(p2); ARG_UNUSED(p3);
-    uint32_t count = 0;
-    while (true) {
-        struct control_event event;
-        int ret = k_msgq_get(&control_queue, &event, K_FOREVER);
-
-        if (ret != 0) {
-            LOG_ERR("[CONTROL] receive failed: %d", ret);
-            continue;
-        }
-
-        LOG_INF("[CONTROL] processed seq=%u", event.seq);
-
-        /* TODO: Define a response-time guarantee. */
-        uint32_t latency =  k_uptime_get_32() -  event.ready_ms ;
-        /* TODO: Measure latency and count every deadline miss. */
-        if ( latency > RESPONSE_TIME_GUARANTEE){
-            count ++;
-        /* TODO: Rate-limit repeated warning messages. */
-            LOG_WRN_RATELIMIT("deadline misses count = %u seq = %u latency_ms %u", count, event.seq, latency);
-        }
-        // LOG_DBG("T_Coop_iteration");
-        k_yield();
+    // while(counter < INCREMENTS) { // -- This while loop instead of for loop only gives  Counter = INCREMETNT at the end.
+    //     k_mutex_lock(&counter_mutex, K_FOREVER);
+    //     counter++;
+    //     k_mutex_unlock(&counter_mutex);
+    //     k_yield(); // -- If not used this in while loop then the entire thread will keep executing till Counter = INCREMETNT.
+    //     LOG_DBG("[%s] finished at [%d]", name,counter);
     // }
-    
+
+    LOG_INF("[%s] finished ", name);
+    k_sem_give(&done_sem);
 }
 
 K_THREAD_DEFINE(thread_a, STACK_SIZE, t_low_fn,NULL, NULL, NULL, PRIO_LOW, 0, 0);
