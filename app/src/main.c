@@ -9,7 +9,7 @@ LOG_MODULE_REGISTER(l2_assignment, LOG_LEVEL_DBG);
 
 #define STACK_SIZE      1024
 #define PRIO            5
-#define INCREMENTS      500   /* each thread increments this many times */
+#define INCREMENTS      1000000   /* each thread increments this many times */
 
 /* Shared state - intentionally unprotected */
 static volatile uint32_t counter;
@@ -24,9 +24,9 @@ void worker_fn(void *p1, void *p2, void *p3)
 
     // without the mutex protection there will be missed increments done ( LOAD - MODIFY - STORE won't happen without interrupt)
     for (int i = 0; i < INCREMENTS; i++) {
-        // k_mutex_lock(&counter_mutex, K_FOREVER);
+        k_mutex_lock(&counter_mutex, K_FOREVER);
         counter++;
-        // k_mutex_unlock(&counter_mutex);
+        k_mutex_unlock(&counter_mutex);
     }
 
     // while(counter < INCREMENTS) { // -- This while loop instead of for loop only gives  Counter = INCREMETNT at the end.
