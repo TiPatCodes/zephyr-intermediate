@@ -11,6 +11,7 @@ LOG_MODULE_REGISTER(homework, LOG_LEVEL_DBG);
 #define SENSOR_MS     100    /* sensor fires every 100ms */
 #define POLL_MS       10     /* polling consumer checks every 10ms */
 #define EVENT_COUNT   10     /* total sensor events to produce */
+#define TASK1         0      /* to enable consumer producer task 1 */
 
 /* ================================================================
  * STARTER CODE -- inefficient polling version
@@ -31,13 +32,18 @@ static int total_processed;
 
 static void sensor_handler(struct k_work *work)
 {
-      ARG_UNUSED(work);
-      total_processed++;
-      LOG_INF("[HANDLER] processed event %d  tick=%u", \
-        total_processed, k_uptime_get_32());
+    ARG_UNUSED(work);
+    total_processed++;
+    LOG_INF("[HANDLER] processed event %d at tick=%u same as generation by [SENSOR] ", total_processed, k_uptime_get_32());
+    /* Summary after all events processed */
+    LOG_INF("[TASK 2 SUMMARY] events = total_processed = %d  wasted=%d",
+        total_processed,
+        total_events - total_processed);
+    
 }
 
 K_WORK_DEFINE(sensor_work, sensor_handler);
+// BONUS ------------------
 // K_WORK_DELAYABLE_DEFINE(debounce_work, sensor_handler);
 
 static void sensor_sim_fn(void *p1, void *p2, void *p3)
@@ -46,14 +52,24 @@ static void sensor_sim_fn(void *p1, void *p2, void *p3)
         k_msleep(SENSOR_MS);
         LOG_INF("[SENSOR] event %d  tick=%u", i, k_uptime_get_32());
 
-        // TASK 2: Replace these two lines with:
-        int ret = k_work_submit(&sensor_work);
-        // int ret = k_work_reschedule(&debounce_work, K_MSEC(30));
-        if (ret < 0) { 
-            LOG_ERR("[SENSOR] work not submitted "); 
-        }
-    }
+        total_events++;
 
+        if(TASK1){
+            sensor_flag = true;
+        }
+        else 
+        {
+            // TASK 2: Replace these two lines with:
+            int ret = k_work_submit(&sensor_work);
+            // BONUS ---------------
+            // int ret = k_work_reschedule(&debounce_work, K_MSEC(30));
+            if (ret < 0) 
+            { 
+                LOG_ERR("[SENSOR] work not submitted "); 
+            }
+        }
+        
+    }
     LOG_INF("[SENSOR] all events produced");
 }
 
@@ -88,18 +104,17 @@ static void polling_fn(void *p1, void *p2, void *p3)
     }
 
     /* Summary after all events processed */
-    LOG_INF("\n");
-    LOG_INF("[SUMMARY] events=%d  total_wakeups=%d  wasted=%d",
+    LOG_INF("[TASK 1 SUMMARY] events=%d  total_wakeups=%d  wasted=%d",
             total_processed,
             total_wakeups,
             total_wakeups - total_processed);
-    LOG_INF("[SUMMARY] wasted wakeups = %d%% of all wakeups",
+    LOG_INF("[TASK 1 SUMMARY] wasted wakeups = %d%% of all wakeups",
             (total_wakeups - total_processed) * 100 /
             total_wakeups);
 }
 
 K_THREAD_DEFINE(sensor_thread,  STACK_SIZE, sensor_sim_fn, NULL, NULL, NULL, 5, 0, 0);
-K_THREAD_DEFINE(_thread,  STACK_SIZE, sensor_sim_fn, NULL, NULL, NULL, 5, 0, 0);
+K_THREAD_DEFINE(polling_thread, STACK_SIZE, polling_fn,    NULL, NULL, NULL, 5, 0, 0);
 
 int main(void)
 {
