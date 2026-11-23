@@ -76,6 +76,7 @@ static void logger_thread_fn(void *p1, void *p2, void *p3)
     int received = 0;
     struct sensor_data msg;
     int task_wdtch;
+    task_wdtch = task_wdt_add(TASK_TIMEPERIOD, task_callback_fn, (void*)k_current_get());
     while (received < SENSOR_COUNT) {
         /*
          * Message subscribers receive a copy of the published message.
@@ -90,14 +91,11 @@ static void logger_thread_fn(void *p1, void *p2, void *p3)
 
         received++;
 
-        task_wdtch = task_wdt_add(TASK_TIMEPERIOD, task_callback_fn, (void*)k_current_get());
-
         LOG_INF("[LOGGER-MSG] thread=%s seq=%u temp=%d latency=%ums",
                 k_thread_name_get(k_current_get()),
                 msg.seq,
                 msg.temperature_mc,
                 k_uptime_get_32() - msg.timestamp_ms);
-
         /*
          * Slow logger.
          * Message copies let it process old samples safely.
