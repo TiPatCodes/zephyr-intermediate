@@ -48,7 +48,7 @@ void worker_fn(void *p1, void *p2, void *p3)
 /*  handler. The handler body is the same as what's inside the        */
 /*  if (sensor_flag) block below.                                      */
 /* ------------------------------------------------------------------ */
-
+#ifdef TASK1
 static void polling_fn(void *p1, void *p2, void *p3)
 {
     ARG_UNUSED(p1); ARG_UNUSED(p2); ARG_UNUSED(p3);
@@ -80,6 +80,7 @@ static void polling_fn(void *p1, void *p2, void *p3)
             (total_wakeups - total_processed) * 100 /
             total_wakeups);
 }
+#endif
 
 K_THREAD_DEFINE(thread_a, STACK_SIZE, t_low_fn,NULL, NULL, NULL, PRIO_LOW, 0, 0);
 K_THREAD_DEFINE(thread_b, STACK_SIZE, t_med_fn,NULL, NULL, NULL, PRIO_MED, 0, 0);
