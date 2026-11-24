@@ -11,7 +11,7 @@ LOG_MODULE_REGISTER(homework, LOG_LEVEL_DBG);
 #define SENSOR_MS     100    /* sensor fires every 100ms */
 #define POLL_MS       10     /* polling consumer checks every 10ms */
 #define EVENT_COUNT   10     /* total sensor events to produce */
-#define TASK1         0      /* to enable consumer producer task 1 */
+// #define TASK1             /* to enable consumer producer task 1 */
 
 /* ================================================================
  * STARTER CODE -- inefficient polling version
@@ -23,7 +23,9 @@ static volatile bool sensor_flag;
 
 /* Statistics */
 static int total_events;
+#ifdef TASK1
 static int total_wakeups;
+#endif
 static int total_processed;
 
 /* ------------------------------------------------------------------ */
@@ -39,7 +41,6 @@ static void sensor_handler(struct k_work *work)
     LOG_INF("[TASK 2 SUMMARY] events = total_processed = %d  wasted=%d",
         total_processed,
         total_events - total_processed);
-    
 }
 
 K_WORK_DEFINE(sensor_work, sensor_handler);
@@ -54,20 +55,19 @@ static void sensor_sim_fn(void *p1, void *p2, void *p3)
 
         total_events++;
 
-        if(TASK1){
-            sensor_flag = true;
+        #ifdef TASK1
+        sensor_flag = true;
+        #endif
+
+        // TASK 2: Replace these two lines with:
+        int ret = k_work_submit(&sensor_work);
+        // BONUS ---------------
+        // int ret = k_work_reschedule(&debounce_work, K_MSEC(30));
+        if (ret < 0) 
+        { 
+            LOG_ERR("[SENSOR] work not submitted "); 
         }
-        else 
-        {
-            // TASK 2: Replace these two lines with:
-            int ret = k_work_submit(&sensor_work);
-            // BONUS ---------------
-            // int ret = k_work_reschedule(&debounce_work, K_MSEC(30));
-            if (ret < 0) 
-            { 
-                LOG_ERR("[SENSOR] work not submitted "); 
-            }
-        }
+        
         
     }
     LOG_INF("[SENSOR] all events produced");
@@ -80,7 +80,7 @@ static void sensor_sim_fn(void *p1, void *p2, void *p3)
 /*  handler. The handler body is the same as what's inside the        */
 /*  if (sensor_flag) block below.                                      */
 /* ------------------------------------------------------------------ */
-
+#ifdef TASK1
 static void polling_fn(void *p1, void *p2, void *p3)
 {
     ARG_UNUSED(p1); ARG_UNUSED(p2); ARG_UNUSED(p3);
@@ -112,9 +112,12 @@ static void polling_fn(void *p1, void *p2, void *p3)
             (total_wakeups - total_processed) * 100 /
             total_wakeups);
 }
+#endif
 
 K_THREAD_DEFINE(sensor_thread,  STACK_SIZE, sensor_sim_fn, NULL, NULL, NULL, 5, 0, 0);
+#ifdef TASK1
 K_THREAD_DEFINE(polling_thread, STACK_SIZE, polling_fn,    NULL, NULL, NULL, 5, 0, 0);
+#endif
 
 int main(void)
 {
