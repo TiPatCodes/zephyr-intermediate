@@ -71,11 +71,21 @@ ZTEST_SUITE(temp_alarm_check, NULL, NULL, before, NULL, NULL);
 
 ZTEST(temp_alarm_check, test_below_threshold)
 {
-	/* TODO(l8-task1): a reading of 20 C is below the threshold.
+	/* (l8-task1): a reading of 20 C is below the threshold.
 	 * Check the status, and how the module talked to the sensor.
 	 * See TEST_SPEC.md "Suite temp_alarm_check" #1.
 	 */
-	ztest_test_skip();
+	// ztest_test_skip();
+	struct temp_alarm_status status;
+	sensor_fake_set_temperature(20);
+
+	zassert_ok(temp_alarm_check(), "must pass the temp_alarm_check");
+	zassert_ok(temp_alarm_get_status(&status), "get_status must succeed");
+
+	zassert_equal(status.last_temp, 20, "last_temp must be 20 after init, got %d",
+		      status.last_temp);
+	zassert_false(status.is_alarming, "is_alarming must be false after init");
+
 }
 
 ZTEST(temp_alarm_check, test_at_threshold)
