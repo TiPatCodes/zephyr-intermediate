@@ -203,6 +203,8 @@ ZTEST(temp_alarm_reset, test_reset_clears_state)
 
 	temp_alarm_reset();
 
+	int ret = temp_alarm_get_status(&status);
+
 	zassert_equal(status.last_temp, 40, "last_temp must be 40 keeps last temp after reset, got %d",
 		      status.last_temp);
 	zassert_equal(status.alarm_count, 0U, "alarm_count must be 0 after reset got %u",

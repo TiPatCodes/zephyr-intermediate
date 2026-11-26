@@ -41,28 +41,64 @@ ZTEST_SUITE(temp_alarm_sensor_errors, NULL, NULL, before, NULL, NULL);
 
 ZTEST(temp_alarm_sensor_errors, test_fetch_error_propagates)
 {
-	/* TODO(l8-task2): a failed fetch is reported,
+	/* (l8-task2): a failed fetch is reported,
 	 * and the module does not go on to read the channel.
 	 * See TEST_SPEC.md "Suite temp_alarm_sensor_errors" #1.
 	 */
-	ztest_test_skip();
+	// ztest_test_skip();
+	struct temp_alarm_status status ; 
+	fake_sensor_sample_fetch_fake.return_value  = -EIO ;
+
+	zassert_equal(temp_alarm_check(void),-EIO, " must be -EIO for the fetch failure");
+
+	int ret = temp_alarm_get_status(&status);
+
+	zassert_equal(status.last_error, -EIO, " last_error must be -EIO because of fetch failure got %d",status.last_error);
 }
 
 ZTEST(temp_alarm_sensor_errors, test_channel_get_error_propagates)
 {
-	/* TODO(l8-task2): a failed channel read is reported.
+	/* (l8-task2): a failed channel read is reported.
 	 * See TEST_SPEC.md "Suite temp_alarm_sensor_errors" #2.
 	 */
-	ztest_test_skip();
+	// ztest_test_skip();
+	RESET_FAKE(fake_sensor_channel_get) ;
+	struct temp_alarm_status status ; 
+
+	fake_sensor_channel_get_fake.return_value =  -EIO;
+
+	zassert_equal(temp_alarm_check(void), -EIO, "must be -EIO for the channel get error"):
+
+	zassert_equal(fake_sensor_sample_fetch_fake.call_count, 1 , "sesor fetch fake should be called once got %d", fake_sensor_sample_fetch_fake.call_count);
+
+	int ret = temp_alarm_get_status(&status);
+
+	zassert_equal(status.last_error, -EIO, " last_error must be -EIO because of channel get failure got %d",status.last_error);
 }
 
 ZTEST(temp_alarm_sensor_errors, test_fail_then_recover)
 {
-	/* TODO(l8-task2): the first fetch fails and the second one succeeds.
+	/* (l8-task2): the first fetch fails and the second one succeeds.
 	 * The module must recover on the second check.
 	 * See TEST_SPEC.md "Suite temp_alarm_sensor_errors" #3.
 	 */
-	ztest_test_skip();
+	// ztest_test_skip();
+	struct temp_alarm_status status ; 
+	fake_sensor_sample_fetch_fake.return_value  = -EIO ;
+	zassert_equal(temp_alarm_check(void),-EIO, " must be -EIO for the fetch failure");
+
+	RESET_FAKE(fake_sensor_sample_fetch);
+	sensor_fake_set_temperature(20);
+
+	zassert_equal(temp_alarm_check(void),0, " must be 0 for the fetch after RESET_FAKE of return value");
+
+	int ret = temp_alarm_get_status(&status);
+
+	zassert_equal(status.last_temp, 20 , "last_temp must be 20");
+
+	zassert_false(status.is_alarming, "Is_alarming must be false");
+
+	zassert_equal(status.last_error, -EIO, "the last error stored from fetch failure should be - EIO got %d",status.last_error);
 }
 
 /*
@@ -76,33 +112,44 @@ ZTEST_SUITE(temp_alarm_invalid_input, NULL, NULL, before, NULL, NULL);
 
 ZTEST(temp_alarm_invalid_input, test_get_status_null)
 {
-	/* TODO(l8-task2): a NULL status pointer is rejected.
+	/* (l8-task2): a NULL status pointer is rejected.
 	 * See TEST_SPEC.md "Suite temp_alarm_invalid_input" #1.
 	 */
-	ztest_test_skip();
+	// ztest_test_skip();
+
+	zassert_equal(temp_alarm_get_status(NULL), -EINVAL, "return should be -EINVAL for NULL");
+
 }
 
 ZTEST(temp_alarm_invalid_input, test_init_without_device)
 {
-	/* TODO(l8-task2): init without a sensor device is rejected.
+	/* (l8-task2): init without a sensor device is rejected.
 	 * See TEST_SPEC.md "Suite temp_alarm_invalid_input" #2.
 	 */
-	ztest_test_skip();
+	// ztest_test_skip();
+
+	zassert_equal(temp_alarm_init(NULL,30),-EINVAL, "init must be NULL");
+
 }
 
 ZTEST(temp_alarm_invalid_input, test_init_threshold_out_of_range)
 {
-	/* TODO(l8-task2): init rejects thresholds outside the allowed range.
+	/* (l8-task2): init rejects thresholds outside the allowed range.
 	 * See TEST_SPEC.md "Suite temp_alarm_invalid_input" #3.
 	 */
-	ztest_test_skip();
+	// ztest_test_skip();
+	zassert_equal(temp_alarm_init(&fake_sensor_dev,-1),-EINVAL, " must be -EINVAL because threshold is -1");
+	zassert_equal(temp_alarm_init(&fake_sensor_dev,101),-EINVAL, " must be -EINVAL because threshold is 101");
 }
 
 ZTEST(temp_alarm_invalid_input, test_set_threshold_out_of_range)
 {
-	/* TODO(l8-task2): set_threshold rejects values outside the allowed range,
+	/* (l8-task2): set_threshold rejects values outside the allowed range,
 	 * and keeps the old threshold.
 	 * See TEST_SPEC.md "Suite temp_alarm_invalid_input" #4.
 	 */
-	ztest_test_skip();
+	// ztest_test_skip();
+	zassert_equal(temp_alarm_set_threshold(-1),-EINVAL,"Must be -EINVAL because threshold for -1");
+	zassert_equal(temp_alarm_set_threshold(101),-EINVAL,"Must be -EINVAL because threshold for 101");
+	
 }
