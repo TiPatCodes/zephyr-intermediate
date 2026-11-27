@@ -8,8 +8,8 @@
 LOG_MODULE_REGISTER(homework, LOG_LEVEL_INF);
 
 #define STACK_SIZE            2048
-#define CONTROL_PRIORITY         4
-#define MAINTENANCE_PRIORITY     7
+#define CONTROL_PRIORITY         7
+#define MAINTENANCE_PRIORITY     4
 #define EVENT_PERIOD_MS        250
 #define MAINTENANCE_LOAD_US  45000
 #define RESPONSE_TIME_GUARANTEE 10
@@ -47,7 +47,7 @@ static void event_timer_expiry(struct k_timer *timer)
     k_sem_give(&maintenance_start);
 
     /* TODO: Add an application trace event for this sequence. */
-    sys_trace_named_event("event messg put", event.seq , event.ready_ms);
+    sys_trace_named_event("event messg put [start]", event.seq , event.ready_ms);
 }
 
 K_TIMER_DEFINE(event_timer, event_timer_expiry, NULL);
@@ -71,25 +71,25 @@ static void control_fn(void *p1, void *p2, void *p3)
 
         LOG_INF("[CONTROL] processed seq=%u", event.seq);
 
-        /* TODO: Define a response-time guarantee. 
+        /* : Define a response-time guarantee. 
         the response time guarantee is a measurement of the time guaranteed to be received in message que from put to get
         */
         uint32_t latency =  k_uptime_get_32() -  event.ready_ms ;
-        /* TODO: Measure latency and count every deadline miss. */
+        /* : Measure latency and count every deadline miss. */
         if ( latency > RESPONSE_TIME_GUARANTEE){
             count ++;
-        /* TODO: Rate-limit repeated warning messages. */
+        /* : Rate-limit repeated warning messages. */
             LOG_WRN_RATELIMIT("deadline misses count = %u seq = %u latency_ms %u", count, event.seq, latency);
         }
     
-        /* TODO: Add an application trace event for completion. */
-        sys_trace_named_event("event messg put", event.seq , event.ready_ms);
+        /* : Add an application trace event for completion. */
+        sys_trace_named_event("event messg read [done] ", event.seq , event.ready_ms);
 
         /*
         [SUMMMARY]
         Based on the shell kernel snapshot and trace report the system execute the maintenace thread first because of its priority value lower 
         than control thread. Thus right after the timer interrupt execution the Maintenance being higher in priority takes the CPU and blocks it 
-        till the 45us.
+        till the 45000us.
         Which makes controller thread miss the response time guarantee (i.e time between message put and get in message que)
 
         Changing / Inversing their priorities reduces the RESPONSE TIME GUARANTEE misses.
