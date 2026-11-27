@@ -11,7 +11,7 @@
 DEFINE_FFF_GLOBALS;
 
 /* (l8-task0): define fake_sensor_sample_fetch, matching your declaration in sensor_fake.h. */
-DEFINE_FAKE_VALUE_FUNC(int, fake_sensor_sample_fetch,const struct device * dev, enum sensor_channel type);
+DEFINE_FAKE_VALUE_FUNC(int, fake_sensor_sample_fetch,const struct device *, enum sensor_channel);
 DEFINE_FAKE_VALUE_FUNC(int, fake_sensor_channel_get, const struct device *, enum sensor_channel,
 		       struct sensor_value *);
 
