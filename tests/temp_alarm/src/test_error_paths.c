@@ -47,11 +47,14 @@ ZTEST(temp_alarm_sensor_errors, test_fetch_error_propagates)
 	 */
 	// ztest_test_skip();
 	struct temp_alarm_status status ; 
+
 	fake_sensor_sample_fetch_fake.return_value  = -EIO ;
 
 	zassert_equal(temp_alarm_check(void),-EIO, " must be -EIO for the fetch failure");
 
-	int ret = temp_alarm_get_status(&status);
+	zassert_ok(temp_alarm_get_status(&status),"must get_status succeed");
+
+	zassert_equal(fake_sensor_channel_get_fake.call_count, 0 , "sesor channel get fake should not  be called, got %d", fake_sensor_channel_get_fake.call_count);
 
 	zassert_equal(status.last_error, -EIO, " last_error must be -EIO because of fetch failure got %d",status.last_error);
 }
@@ -62,16 +65,18 @@ ZTEST(temp_alarm_sensor_errors, test_channel_get_error_propagates)
 	 * See TEST_SPEC.md "Suite temp_alarm_sensor_errors" #2.
 	 */
 	// ztest_test_skip();
-	RESET_FAKE(fake_sensor_channel_get) ;
+
+	RESET_FAKE(fake_sensor_channel_get) ;  // to remove the custome fake of fake_sensor_channel_get
 	struct temp_alarm_status status ; 
 
 	fake_sensor_channel_get_fake.return_value =  -EIO;
 
 	zassert_equal(temp_alarm_check(void), -EIO, "must be -EIO for the channel get error"):
 
-	zassert_equal(fake_sensor_sample_fetch_fake.call_count, 1 , "sesor fetch fake should be called once got %d", fake_sensor_sample_fetch_fake.call_count);
 
-	int ret = temp_alarm_get_status(&status);
+	zassert_ok(temp_alarm_get_status(&status),"must get_status succeed");
+
+	zassert_equal(fake_sensor_sample_fetch_fake.call_count, 1 , "sesor fetch fake should be called once got %d", fake_sensor_sample_fetch_fake.call_count);
 
 	zassert_equal(status.last_error, -EIO, " last_error must be -EIO because of channel get failure got %d",status.last_error);
 }
@@ -87,12 +92,12 @@ ZTEST(temp_alarm_sensor_errors, test_fail_then_recover)
 	fake_sensor_sample_fetch_fake.return_value  = -EIO ;
 	zassert_equal(temp_alarm_check(void),-EIO, " must be -EIO for the fetch failure");
 
-	RESET_FAKE(fake_sensor_sample_fetch);
+	RESET_FAKE(fake_sensor_sample_fetch);  // to reset the fake_sensor_sample_fetch return value
 	sensor_fake_set_temperature(20);
 
-	zassert_equal(temp_alarm_check(void),0, " must be 0 for the fetch after RESET_FAKE of return value");
+	zassert_ok(temp_alarm_check(void)," must be 0 for the fetch after RESET_FAKE of return value");
 
-	int ret = temp_alarm_get_status(&status);
+	zassert_ok(temp_alarm_get_status(&status),"must get_status succeed");
 
 	zassert_equal(status.last_temp, 20 , "last_temp must be 20");
 
