@@ -134,6 +134,9 @@ ZTEST(temp_alarm_check, test_above_threshold)
 				status.last_temp);
 
 	zassert_true(status.is_alarming, "is_alarming must be true ");
+
+	zassert_equal(status.alarm_count,1, "alarm_count must be 1, got %d",
+				status.alarm_count);
 }
 
 /*
@@ -167,9 +170,13 @@ ZTEST(temp_alarm_threshold, test_new_threshold_clears_alarm)
 
 	zassert_ok(temp_alarm_get_status(&status),"must pass the get_status");
 
-	zassert_false(status.is_alarming, "is_alarming must be false after setting the new threshold 50");
+	zassert_false(status.is_alarming, "is_alarming must be false after alarm_set_threshold");
 
 	zassert_ok(temp_alarm_check(),"must pass the temp_alarm_check");
+
+	zassert_ok(temp_alarm_get_status(&status),"must pass the get_status");
+
+	zassert_false(status.is_alarming, "is_alarming must be false after setting the new threshold 50");
 
 	zassert_equal(status.alarm_count,1, "alarm_count must be 1, got %d",
 				status.alarm_count);
@@ -198,8 +205,8 @@ ZTEST(temp_alarm_reset, test_reset_clears_state)
 	sensor_fake_set_temperature (40);
 
 	zassert_ok(temp_alarm_check(),"must pass the alarm_check");
-	zassert_ok(temp_alarm_check(),"must pass the alarm_check")
-	zassert_ok(temp_alarm_check(),"must pass the alarm_check")
+	zassert_ok(temp_alarm_check(),"must pass the alarm_check");
+	zassert_ok(temp_alarm_check(),"must pass the alarm_check");
 
 	zassert_ok(temp_alarm_get_status(&status),"must pass the get_status");
 
