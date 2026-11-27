@@ -16,6 +16,7 @@
 
 #include "sensor_fake.h"
 #include "temp_alarm.h"
+#include "zephyr/drivers/sensor.h"
 
 #define DEFAULT_THRESHOLD 30
 
@@ -79,7 +80,11 @@ ZTEST(temp_alarm_check, test_below_threshold)
 	struct temp_alarm_status status;
 	sensor_fake_set_temperature(20);
 
-	zassert_equal(temp_alarm_check(void) , 0 , "must pass the temp_alarm_check");
+	zassert_ok(temp_alarm_check(),"must pass the temp_alarm_check");
+
+	zassert_equal(fake_sensor_sample_fetch_fake.call_count, 1 , "the fake sample fetch should be called once ibn temp_check");
+
+	zassert_equal(fake_sensor_channel_get_fake.arg1_val,SENSOR_CHAN_AMBIENT_TEMP, "channel must be AMBIENT TEMP which is replaced by ambient temperature");
 
 	zassert_ok(temp_alarm_get_status(&status), "get_status must succeed");
 
@@ -99,7 +104,7 @@ ZTEST(temp_alarm_check, test_at_threshold)
 	struct temp_alarm_status status;
 	sensor_fake_set_temperature (30);
 
-	zassert_equal(temp_alarm_check(void),0, "must pass the temp_alarm_check");
+	zassert_ok(temp_alarm_check(),"must pass the temp_alarm_check");
 
 	zassert_ok(temp_alarm_get_status(&status), "get _status must succeed");
 
@@ -121,7 +126,7 @@ ZTEST(temp_alarm_check, test_above_threshold)
 	struct temp_alarm_status status;
 	sensor_fake_set_temperature (40);
 
-	zassert_equal(temp_alarm_check(void),0, "must pass the temp_alarm_check");
+	zassert_ok(temp_alarm_check(),"must pass the temp_alarm_check");
 
 	zassert_ok(temp_alarm_get_status(&status), "get _status must succeed");
 
@@ -152,19 +157,19 @@ ZTEST(temp_alarm_threshold, test_new_threshold_clears_alarm)
 
 	sensor_fake_set_temperature (40);
 
-	zassert_equal(temp_alarm_check(void),0, "must pass the temp_alarm_check");
+	zassert_ok(temp_alarm_check(),"must pass the temp_alarm_check");
 
 	zassert_ok(temp_alarm_get_status(&status), "get _status must succeed");
 
 	zassert_true(status.is_alarming, "is_alarming must be true ");
 
-	int ret = temp_alarm_set_threshold(50);
+	zassert_ok(temp_alarm_set_threshold(50)," must pass the set threshold to 50");
 
-	zassert_equal(temp_alarm_check(void),0, "must pass the temp_alarm_check");
+	zassert_ok(temp_alarm_get_status(&status),"must pass the get_status");
 
-	int ret = temp_alarm_get_status(&status);
+	zassert_false(status.is_alarming, "is_alarming must be false after setting the new threshold 50");
 
-	zassert_false(status.is_alarming, "is_alarming must be false");
+	zassert_ok(temp_alarm_check(),"must pass the temp_alarm_check");
 
 	zassert_equal(status.alarm_count,1, "alarm_count must be 1, got %d",
 				status.alarm_count);
@@ -192,24 +197,27 @@ ZTEST(temp_alarm_reset, test_reset_clears_state)
 
 	sensor_fake_set_temperature (40);
 
-	int ret = temp_alarm_check(void);
-	int ret = temp_alarm_check(void);
-	int ret = temp_alarm_check(void);
+	zassert_ok(temp_alarm_check(),"must pass the alarm_check");
+	zassert_ok(temp_alarm_check(),"must pass the alarm_check")
+	zassert_ok(temp_alarm_check(),"must pass the alarm_check")
 
-	int ret = temp_alarm_get_status(&status);
+	zassert_ok(temp_alarm_get_status(&status),"must pass the get_status");
 
 	zassert_equal(status.alarm_count,3, "alarm_count must be 3, got %d",
 				status.alarm_count);
 
 	temp_alarm_reset();
 
-	int ret = temp_alarm_get_status(&status);
+	zassert_ok(temp_alarm_get_status(&status),"must pass the get_status after the temp_alarm_reset");
 
 	zassert_equal(status.last_temp, 40, "last_temp must be 40 keeps last temp after reset, got %d",
 		      status.last_temp);
+
 	zassert_equal(status.alarm_count, 0U, "alarm_count must be 0 after reset got %u",
 		      status.alarm_count);
+
 	zassert_false(status.is_alarming, "is_alarming must be false after reset ");
+
 	zassert_equal(status.last_error, 0, "last_error must be 0 after reset , got %d",
 		      status.last_error);
 }
