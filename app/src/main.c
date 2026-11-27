@@ -71,6 +71,10 @@ static void control_fn(void *p1, void *p2, void *p3)
 
         LOG_INF("[CONTROL] processed seq=%u", event.seq);
 
+        /* : Add an application trace event for completion. */
+        sys_trace_named_event("event messg read [done] ", event.seq , event.ready_ms);
+
+
         /* : Define a response-time guarantee. 
         the response time guarantee is a measurement of the time guaranteed to be received in message que from put to get
         */
@@ -81,22 +85,6 @@ static void control_fn(void *p1, void *p2, void *p3)
         /* : Rate-limit repeated warning messages. */
             LOG_WRN_RATELIMIT("deadline misses count = %u seq = %u latency_ms %u", count, event.seq, latency);
         }
-    
-        /* : Add an application trace event for completion. */
-        sys_trace_named_event("event messg read [done] ", event.seq , event.ready_ms);
-
-        /*
-        [SUMMMARY]
-        Based on the shell kernel snapshot and trace report the system execute the maintenace thread first because of its priority value lower 
-        than control thread. Thus right after the timer interrupt execution the Maintenance being higher in priority takes the CPU and blocks it 
-        till the 45000us.
-        Which makes controller thread miss the response time guarantee (i.e time between message put and get in message que)
-
-        Changing / Inversing their priorities reduces the RESPONSE TIME GUARANTEE misses.
-
-        I've used a shell as log output instead of console.
-
-        */
     }
 }
 
